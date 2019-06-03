@@ -18,27 +18,6 @@ function randInt(a, b){
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function getBoardLetter(a) {
-  switch(a){
-    case 0:
-      return 'A'
-    case 1:
-      return 'B'
-    case 2:
-      return 'C'
-    case 3:
-      return 'D'
-    case 4:
-      return 'E'
-    case 5:
-      return 'F'
-    case 6:
-      return 'G'
-    case 7:
-      return 'H'
-  }
-}
-
 function toOneDCoordinate(x, y) {
   return (y * 8) + x
 }
@@ -428,7 +407,7 @@ function getBias(x, y) {
     x === 6 && y === 0 ||
     x === 6 && y === 7 ||
     x === 6 && y === 6 ||
-    x === 7 && y === 6) { return -5 }
+    x === 7 && y === 6) { return -10 }
   //favorecer bordes
   else if (x === 0 ||
     x === 7 ||
@@ -438,7 +417,7 @@ function getBias(x, y) {
   else if (x === 1 ||
     x === 6 ||
     y === 1 ||
-    y === 6) { return -3 }
+    y === 6) { return -5 }
   return 0
 }
 
@@ -449,9 +428,9 @@ function getOponent(player) {
 
 function negaMax(board, player, lookahead, iteration) {
   var nextPlayer = getOponent(player)
-  console.log(`iter: ${iteration}`)
+  /*console.log(`iter: ${iteration}`)
   console.log(board)
-  console.log(`player: ${player}`)
+  console.log(`player: ${player}`)*/
   var moves = getPossibleMoves(board, player)
   if ((iteration % 2) == 0) {
     for (var i = 0 ; i < moves.length; i++) {
@@ -461,7 +440,8 @@ function negaMax(board, player, lookahead, iteration) {
   if (iteration == lookahead || moves.length == 1) { // hoja del arbol
     moves.sort(compareMoves)
     try {
-      console.log(`base return: (${moves[0].x},${moves[0].y})`)
+      let planchazo = moves[0].x
+      return moves[0]
     }
     catch(e) {
       var move = Object.create(state)
@@ -482,42 +462,39 @@ function negaMax(board, player, lookahead, iteration) {
       var newBoard = board.map(function(arr){
         return arr.slice()
       })
-      console.log(`iter: ${iteration}`)
+      /*console.log(`iter: ${iteration}`)
       console.log(`player: ${player}`)
-      console.log(moves[i])
+      console.log(moves[i])*/
       var turnovers = getTurnovers(moves[i].x, moves[i].y, player, newBoard)
       var coordX = turnovers[1]
       var coordY = turnovers[2]
-      console.log(coordX)
-      console.log(coordY)
+      //console.log(coordX)
+      //console.log(coordY)
       newBoard[moves[i].y][moves[i].x] = player
       for (var j = 0; j < coordX.length; j++) {
         newBoard[coordY[j]][coordX[j]] = player
       }
-      console.log(newBoard)
+      /*console.log(newBoard)
       console.log(board)
       console.log(`move before: ${moves[i].x},${moves[i].y}`)
-      console.log(`heuristic before: ${moves[i].heuristic}`)
-      var bestChildren = negaMax(newBoard, nextPlayer, lookahead, iteration + 1)
-      console.log(moves[i])
+      console.log(`heuristic before: ${moves[i].heuristic}`)*/
+      var bestChild = negaMax(newBoard, nextPlayer, lookahead, iteration + 1)
+      /*console.log(moves[i])
       console.log(`iter: ${iteration}`)
       console.log(`player: ${player}`)
       console.log(`move after: ${moves[i].x},${moves[i].y}`)
-      console.log(`heuristic after: ${moves[i].heuristic}`)
+      console.log(`heuristic after: ${moves[i].heuristic}`)*/
       try {
-        console.log(`bestChildren: (${bestChildren.x},${bestChildren.y})`)
-        moves[i].heuristic = bestChildren.heuristic
+        //console.log(`bestChildren: (${bestChildren.x},${bestChildren.y})`)
+        moves[i].heuristic = bestChild.heuristic
       }
-      catch(e){"cachazo"}
+      catch(e){}
       //console.log(`heuristic: ${moves[i].heuristic}`)
       if ((iteration % 2) == 0 ){
         moves[i].heuristic *= -1
       }
     }
     moves.sort(compareMoves)
-    for (var i = 0;i<moves.length;i++){
-      console.log(moves[i])
-    }
   }
   return moves[0]
 }
@@ -581,14 +558,9 @@ socket.on('ready', function(data){
     var board = convertBoard(rawBoard)
     console.log(board)
     console.log(`Es tu turno, tu id es el ${playerTurnID}`);
-    /*var possibleMoves = getPossibleMoves(board, playerTurnID)
-    console.log(possibleMoves)
-    console.log(`(${possibleMoves[0].x},${possibleMoves[0].y})`)
-    var movement = toOneDCoordinate(possibleMoves[0].x, possibleMoves[0].y);
-    console.log(movement)*/
 
-    var bestMove = negaMax(board, playerTurnID, 3, 1)
-    console.log(`${bestMove.x},${bestMove.y}`)
+    var bestMove = negaMax(board, playerTurnID, 5, 1)
+    console.log(`(${bestMove.x},${bestMove.y})`)
     var movement = toOneDCoordinate(bestMove.x, bestMove.y)
     console.log(movement)
 
@@ -603,8 +575,6 @@ socket.on('ready', function(data){
 socket.on('finish', function(data){
     var gameID = data.game_id;
     var playerTurnID = data.player_turn_id;
-    var winnerTurnID = data.winner_turn_id;
-    var board = data.board;
     
     // TODO: Your cleaning board logic here
     
