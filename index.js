@@ -2,12 +2,10 @@ const state = {
   x: Number,
   y: Number,
   heuristic: Number,
+  maxChild: null,
   children: []
 }
 
-var tileRep = ['_', 'X', 'O'],
-    N = 8;
-    
 var readline = require('readline').createInterface({
   input: process.stdin,
   output: process.stdout
@@ -18,13 +16,6 @@ function randInt(a, b){
   min = Math.ceil(a);
   max = Math.floor(b);
   return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function ix(row, col){
-  console.log(row);
-  console.log(col);
-  console.log('abcdefgh'.indexOf(col));
-  return (row - 1) * N + 'abcdefgh'.indexOf(col);
 }
 
 function getBoardLetter(a) {
@@ -48,24 +39,7 @@ function getBoardLetter(a) {
   }
 }
 
-function humanBoard(board){
-
-  var result = '    A  B  C  D  E  F  G  H';
-
-  for(var i = 0; i < board.length; i++){
-    if(i % N === 0){
-      result += '\n\n ' + (parseInt(Math.floor(i / N)) + 1) + ' ';
-    }
-
-    result += ' ' + tileRep[board[i]] + ' ';
-  }
-
-  return result;
-}
-
 function toOneDCoordinate(x, y) {
-  console.log(`le esta entrando: ${x},${y}`)
-  console.log((y * 8) + x)
   return (y * 8) + x
 }
 
@@ -82,20 +56,9 @@ function convertBoard(rawBoard) {
   return board
 }
 
-function validateHumanPosition(position){
-  var validated = position.length === 2;
-
-  if(validated){
-    var row = parseInt(position[0]),
-        col = position[1].toLowerCase();
-
-    return (1 <= row && row <= N) && ('abcdefgh'.indexOf(col) >= 0);
-  }
-
-  return false;
-}
-
 function getTurnovers(x, y, player, board) {
+  var coordX = []
+  var coordY = []
   var turnovers = 0
   if (board[y][x] !== 0) {
     //console.log("ya hay numero")
@@ -103,6 +66,8 @@ function getTurnovers(x, y, player, board) {
   }
   //left
   if (x > 0) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando izq")
     var addTurnovers = 0
     var posX = x - 1
@@ -112,16 +77,22 @@ function getTurnovers(x, y, player, board) {
         let leftSpace = board[posY][posX--]
         switch (leftSpace) {
           case 0:
+            changesX =[]
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posX + 1 === 0) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX + 1)
+              changesY.push(posY)
               addTurnovers++
               break 
             }
@@ -129,11 +100,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
-    console.log(`Luego de revisar izq: ${addTurnovers}`)
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
+    //console.log(`Luego de revisar izq: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //right
   if (x < 7) {
+    var changesX =[]
+    var changesY = []
     //console.log("Revisando der")
     var addTurnovers = 0
     var posX = x + 1
@@ -143,16 +120,22 @@ function getTurnovers(x, y, player, board) {
         let rightSpace = board[posY][posX++]
         switch (rightSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posX - 1 === 7) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX-1)
+              changesY.push(posY)
               addTurnovers++
               break 
             }
@@ -160,11 +143,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar derecha: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //up
   if (y > 0) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando arriba")
     var addTurnovers = 0
     var posX = x
@@ -174,16 +163,22 @@ function getTurnovers(x, y, player, board) {
         let upperSpace = board[posY--][posX]
         switch (upperSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posY + 1 === 0) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX)
+              changesY.push(posY+1)
               addTurnovers++
               break 
             }
@@ -191,37 +186,42 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar arriba: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //down
   if (y < 7) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando abajo")
     var addTurnovers = 0
     var posX = x
     var posY = y + 1;
     var func = function () {
-      console.log("func")
       while (posY - 1 <= 7) {
-        console.log("while")
         let downSpace = board[posY++][posX]
         switch (downSpace) {
           case 0:
-          console.log("encontro 0")
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
-            console.log("encontro playa")
             return
           default:
-            console.log("encontro la otra playa")
             if (posY - 1 === 7) {
-              console.log("debug 1")
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
-              console.log("debug 2")
+              changesX.push(posX)
+              changesY.push(posY-1)
               addTurnovers++
               break 
             }
@@ -229,11 +229,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar abajo: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //up-left
   if (y > 0 && x > 0) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando arriba-izq")
     var addTurnovers = 0
     var posX = x - 1
@@ -243,16 +249,22 @@ function getTurnovers(x, y, player, board) {
         let ulSpace = board[posY--][posX--]
         switch (ulSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posY + 1 === 0 || posX + 1 === 0) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX+1)
+              changesY.push(posY+1)
               addTurnovers++
               break 
             }
@@ -260,11 +272,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar arriba-izq: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //up-right
   if (y > 0 && x < 7) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando arriba-der")
     var addTurnovers = 0
     var posX = x + 1
@@ -274,16 +292,22 @@ function getTurnovers(x, y, player, board) {
         let urSpace = board[posY--][posX++]
         switch (urSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posY + 1 === 0 || posX - 1 === 7) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX-1)
+              changesY.push(posY+1)
               addTurnovers++
               break 
             }
@@ -291,11 +315,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar arriba-der: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //down-left
   if (y < 7 && x > 0) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando abajo-izq")
     var addTurnovers = 0
     var posX = x - 1
@@ -305,16 +335,22 @@ function getTurnovers(x, y, player, board) {
         let dlSpace = board[posY++][posX--]
         switch (dlSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posY - 1 === 7 || posX + 1  === 0) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX+1)
+              changesY.push(posY-1)
               addTurnovers++
               break 
             }
@@ -322,11 +358,17 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
     //console.log(`Luego de revisar abajo-izq: ${addTurnovers}`)
     turnovers += addTurnovers
   }
   //down-right
   if (y < 7 && x < 7) {
+    var changesX = []
+    var changesY = []
     //console.log("Revisando abajo-der")
     var addTurnovers = 0
     var posX = x + 1
@@ -336,16 +378,22 @@ function getTurnovers(x, y, player, board) {
         let drSpace = board[posY++][posX++]
         switch (drSpace) {
           case 0:
+            changesX = []
+            changesY = []
             addTurnovers = 0
             return
           case player:
             return
           default:
             if (posY - 1 === 7 || posX - 1 === 7) {
+              changesX = []
+              changesY = []
               addTurnovers = 0
               return
             }
             else {
+              changesX.push(posX-1)
+              changesY.push(posY-1)
               addTurnovers++
               break 
             }
@@ -353,10 +401,16 @@ function getTurnovers(x, y, player, board) {
       }
     }
     func()
-    console.log(`Luego de revisar abajo-der: ${addTurnovers}`)
+    for (var i = 0; i < changesX.length ; i++) {
+      coordX.push(changesX[i])
+      coordY.push(changesY[i])
+    }
+    //console.log(`Luego de revisar abajo-der: ${addTurnovers}`)
     turnovers += addTurnovers
   }
-  return turnovers
+  //console.log(coordX)
+  //console.log(coordY)
+  return [turnovers,coordX,coordY]
 }
 
 function getBias(x, y) {
@@ -388,6 +442,113 @@ function getBias(x, y) {
   return 0
 }
 
+function getOponent(player) {
+  if (player === 1) return 2
+  return 1
+}
+
+function negaMax(board, player, lookahead, iteration) {
+  var nextPlayer = getOponent(player)
+  console.log(`iter: ${iteration}`)
+  console.log(board)
+  console.log(`player: ${player}`)
+  var moves = getPossibleMoves(board, player)
+  if ((iteration % 2) == 0) {
+    for (var i = 0 ; i < moves.length; i++) {
+      moves[i].heuristic *= -1
+    }
+  }
+  if (iteration == lookahead || moves.length == 1) { // hoja del arbol
+    moves.sort(compareMoves)
+    try {
+      console.log(`base return: (${moves[0].x},${moves[0].y})`)
+    }
+    catch(e) {
+      var move = Object.create(state)
+      move.x = x
+      move.y = y
+      if ((iteration % 2) == 0) {
+          move.heuristic = 1000
+      }
+      else {
+        move.heuristic = - 1000
+      }
+      return move
+    }
+  }
+  else {
+    //console.log(`length before of moves: ${moves.length}`)
+    for (var i = 0 ; i < moves.length; i++) {
+      var newBoard = board.map(function(arr){
+        return arr.slice()
+      })
+      console.log(`iter: ${iteration}`)
+      console.log(`player: ${player}`)
+      console.log(moves[i])
+      var turnovers = getTurnovers(moves[i].x, moves[i].y, player, newBoard)
+      var coordX = turnovers[1]
+      var coordY = turnovers[2]
+      console.log(coordX)
+      console.log(coordY)
+      newBoard[moves[i].y][moves[i].x] = player
+      for (var j = 0; j < coordX.length; j++) {
+        newBoard[coordY[j]][coordX[j]] = player
+      }
+      console.log(newBoard)
+      console.log(board)
+      console.log(`move before: ${moves[i].x},${moves[i].y}`)
+      console.log(`heuristic before: ${moves[i].heuristic}`)
+      var bestChildren = negaMax(newBoard, nextPlayer, lookahead, iteration + 1)
+      console.log(moves[i])
+      console.log(`iter: ${iteration}`)
+      console.log(`player: ${player}`)
+      console.log(`move after: ${moves[i].x},${moves[i].y}`)
+      console.log(`heuristic after: ${moves[i].heuristic}`)
+      console.log(`bestChildren: (${bestChildren.x},${bestChildren.y})`)
+      moves[i].heuristic = bestChildren.heuristic
+      //console.log(`heuristic: ${moves[i].heuristic}`)
+      if ((iteration % 2) == 0 ){
+        moves[i].heuristic *= -1
+      }
+    }
+    moves.sort(compareMoves)
+    for (var i = 0;i<moves.length;i++){
+      console.log(moves[i])
+    }
+  }
+  return moves[0]
+}
+
+function compareMoves(a, b) {
+  if ( a.heuristic > b.heuristic ){
+    return -1;
+  }
+  if ( a.heuristic < b.heuristic ){
+    return 1;
+  }
+  return 0;
+}
+
+function getPossibleMoves(board, playerTurnID) {
+  var possibleMoves = []
+    for (y = 0; y < board.length; y++) {
+      for (x = 0; x < board[y].length; x++) {
+        //console.log(`${x},${y}`)
+        var turnovers = getTurnovers(x, y, playerTurnID, board)[0]
+        if (turnovers >  0) {
+          var move = Object.create(state)
+          move.x = x
+          move.y = y
+          move.heuristic = turnovers + getBias(x,y)
+          possibleMoves.push(move)
+        }
+      }
+    }
+  return possibleMoves
+}
+
+// Client ----------------------------------------------
+
 var url = 'http://localhost:4000'
 var userName = 'barri'
 var tournamentID = 12
@@ -417,26 +578,15 @@ socket.on('ready', function(data){
     var board = convertBoard(rawBoard)
     console.log(board)
     console.log(`Es tu turno, tu id es el ${playerTurnID}`);
-
-    var x = randInt(0,7)
-    var y = randInt(0,7)
-    var possibleMoves = []
-    for (y = 0; y < board.length; y++) {
-      for (x = 0; x < board[y].length; x++) {
-        console.log(`${x},${y}`)
-         var turnovers = getTurnovers(x, y, playerTurnID, board)
-        if (turnovers >  0) {
-          var move = Object.create(state)
-          move.x = x
-          move.y = y
-          move.heuristic = turnovers + getBias(x,y)
-          possibleMoves.push(move)
-        }
-      }
-    }
+    /*var possibleMoves = getPossibleMoves(board, playerTurnID)
     console.log(possibleMoves)
     console.log(`(${possibleMoves[0].x},${possibleMoves[0].y})`)
     var movement = toOneDCoordinate(possibleMoves[0].x, possibleMoves[0].y);
+    console.log(movement)*/
+
+    var bestMove = negaMax(board, playerTurnID, 2, 1)
+    console.log(`${bestMove.x},${bestMove.y}`)
+    var movement = toOneDCoordinate(bestMove.x, bestMove.y)
     console.log(movement)
 
     socket.emit('play', {
