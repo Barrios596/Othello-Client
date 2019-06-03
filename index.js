@@ -465,8 +465,8 @@ function negaMax(board, player, lookahead, iteration) {
     }
     catch(e) {
       var move = Object.create(state)
-      move.x = x
-      move.y = y
+      move.x = randInt(1,7)
+      move.y = randInt(1,7)
       if ((iteration % 2) == 0) {
           move.heuristic = 1000
       }
@@ -504,8 +504,11 @@ function negaMax(board, player, lookahead, iteration) {
       console.log(`player: ${player}`)
       console.log(`move after: ${moves[i].x},${moves[i].y}`)
       console.log(`heuristic after: ${moves[i].heuristic}`)
-      console.log(`bestChildren: (${bestChildren.x},${bestChildren.y})`)
-      moves[i].heuristic = bestChildren.heuristic
+      try {
+        console.log(`bestChildren: (${bestChildren.x},${bestChildren.y})`)
+        moves[i].heuristic = bestChildren.heuristic
+      }
+      catch(e){"cachazo"}
       //console.log(`heuristic: ${moves[i].heuristic}`)
       if ((iteration % 2) == 0 ){
         moves[i].heuristic *= -1
@@ -584,7 +587,7 @@ socket.on('ready', function(data){
     var movement = toOneDCoordinate(possibleMoves[0].x, possibleMoves[0].y);
     console.log(movement)*/
 
-    var bestMove = negaMax(board, playerTurnID, 2, 1)
+    var bestMove = negaMax(board, playerTurnID, 3, 1)
     console.log(`${bestMove.x},${bestMove.y}`)
     var movement = toOneDCoordinate(bestMove.x, bestMove.y)
     console.log(movement)
